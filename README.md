@@ -17,7 +17,7 @@ When a valid Wi-Fi sharing QR code is detected (on your phone or tablet select W
 
    ```bash
    git clone https://github.com/simsim314/QR-Wifi-Password.git
-   pip install opencv-python pyperclip pyzxing
+   pip install opencv-python pyperclip zxing-cpp
    cd QR-Wifi-Password
    bash make_qr_launcher.sh
    ```
