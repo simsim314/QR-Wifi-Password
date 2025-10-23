@@ -1,57 +1,78 @@
 import cv2
-import pyperclip
 import time
+import pyperclip
+from multiprocessing import Process, Queue
+from pyzxing import BarCodeReader
 
-def parse_qr_to_dict(data: str) -> dict:
-    """
-    Parses a QR string like:
-    WIFI:S:MySSID;T:WPA;P:mypassword;H:false;;
-    into a dictionary: {'S': 'MySSID', 'T': 'WPA', 'P': 'mypassword', 'H': 'false'}
-    """
-    result = {}
-    parts = data.strip(';').split(';')
-    for part in parts:
-        if ':' in part:
-            k, v = part.split(':', 1)
-            result[k] = v
-    return result
+def decode_worker(queue_in: Queue, queue_out: Queue):
+    """Runs in background process to decode frames using PyZXing."""
+    reader = BarCodeReader()
+    while True:
+        frame = queue_in.get()
+        if frame is None:
+            break
+        try:
+            results = reader.decode_array(frame)
+            if results:
+                for res in results:
+                    data = res.get("parsed") or res.get("raw")
+                    if not data:
+                        continue
+                    if isinstance(data, bytes):
+                        data = data.decode(errors="ignore")
+                    data = data.strip().replace("\n", ";")
+                    parts = [p.strip() for p in data.split(";") if p.strip()]
+                    if len(parts) == 4:
+                        queue_out.put(parts[2])  # password
+        except Exception as e:
+            # Safe fallback to avoid blocking
+            print(f"Decoder error: {e}")
 
 def main(camera_index=0):
     cap = cv2.VideoCapture(camera_index)
-    detector = cv2.QRCodeDetector()
-    last_clip = None
+    if not cap.isOpened():
+        print("❌ Could not open camera.")
+        return
 
-    print("🔍 Scanning for QR codes... Press 'q' to quit.")
+    queue_in, queue_out = Queue(maxsize=1), Queue()
+    proc = Process(target=decode_worker, args=(queue_in, queue_out), daemon=True)
+    proc.start()
+
+    last_password = None
+    print("🔍 Scanning... Press 'q' to quit.")
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("⚠️ Failed to read camera frame.")
+            print("⚠️ Failed to read frame.")
             break
 
-        data, points, _ = detector.detectAndDecode(frame)
-        if data:
-            if points is not None:
-                pts = points[0].astype(int)
-                for j in range(len(pts)):
-                    cv2.line(frame, tuple(pts[j]), tuple(pts[(j + 1) % len(pts)]), (0, 255, 0), 2)
+        # Convert to RGB for PyZXing
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            qr_dict = parse_qr_to_dict(data)
-            if "P" in qr_dict:
-                password = qr_dict["P"]
-                if password != last_clip:
-                    pyperclip.copy(password)
-                    last_clip = password
-                    print(f"✅ Copied Wi-Fi password: {password}")
-            else:
-                print(f"ℹ️ No 'P' key found in QR data: {qr_dict}")
+        # Send frame to decoder if queue empty
+        if queue_in.empty():
+            try:
+                queue_in.put_nowait(rgb)
+            except:
+                pass
 
-        cv2.imshow("QR Scanner", frame)
+        # Check for decoded results
+        while not queue_out.empty():
+            password = queue_out.get_nowait()
+            if password and password != last_password:
+                last_password = password
+                pyperclip.copy(password)
+                print(f"✅ Password copied: {password}")
 
+        cv2.imshow("PyZXing QR Scanner (Fast)", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        time.sleep(0.02)
+        time.sleep(0.25)
 
+    # Cleanup
+    queue_in.put(None)
+    proc.join(timeout=1)
     cap.release()
     cv2.destroyAllWindows()
 
