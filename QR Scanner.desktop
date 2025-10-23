@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=QR Scanner
+Comment=QR code scanner that copies results to clipboard
+Exec=/usr/bin/python3 "/home/simsim314/GitHub/qr_scanner/qr_scanner.py"
+Icon=/home/simsim314/GitHub/qr_scanner/icon.jpeg
+Terminal=true
+Categories=Utility;
