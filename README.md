@@ -4,8 +4,8 @@ This project provides a lightweight **desktop QR code scanner for wifi password*
 When a valid Wi-Fi sharing QR code is detected (on your phone or tablet select Wifi -> active network -> Share QR), it automatically copies the password to your clipboard.
 
 <p align="center">
-  <img src="scanner.png" alt="QR Scanner desktop screen" width="50%">
-  <img src="QR-code-of-Wi-Fi-network-on-iPhone.png" alt="iPhone Wi-Fi QR code" width="25%">
+  <img src="scanner.png" alt="QR Scanner desktop screen" width="48%">
+  <img src="detected.png" alt="iPhone Wi-Fi QR code" width="48%">
 </p>
 
 
