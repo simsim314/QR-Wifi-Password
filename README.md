@@ -10,7 +10,7 @@ When a valid Wi-Fi sharing QR code is detected (on your phone or tablet select W
 
 
 <p align="center">
-  <img src="screen.png" alt="QR Scanner desktop screen" width="50%">
+  <img src="scanner.png" alt="QR Scanner desktop screen" width="50%">
 </p>
 
 
